@@ -60,7 +60,7 @@ def separate_last_day(df_):
 
     return last_period, training_data
 
-def build_some_features(df, num_periods_lagged=1, num_periods_diffed=0, rolling=[], hour=True, weekday=True, month=True):
+def build_some_features(df, num_periods_lagged=1, num_periods_diffed=0, rolling=[], hour=True, weekday=True, month=True, yesterday=True, lastweek=True):
     """
     Builds some features by calculating differences between periods  
     """
@@ -71,6 +71,12 @@ def build_some_features(df, num_periods_lagged=1, num_periods_diffed=0, rolling=
     for i in range(1, num_periods_lagged+1):
         # make a new feature, with the lags in the observed values column
         df_['lagged_%s' % str(i)] = df_['value'].shift(i)
+
+    if yesterday == True:
+        df_['lagged_yesterday'] = df_['value'].shift(24)
+
+    if lastweek == True:
+        df_['lagged_lastweek'] = df_['value'].shift(24*7)
         
     # for a few values, get the diffs  
     for i in range(1, num_periods_diffed+1):
@@ -121,7 +127,7 @@ def separate_train_and_test_set(last_period_, training_data_, target='target'):
 
 
 def prepare_for_prediction(series_, number_of_periods_ahead, num_periods_lagged, 
-                           num_periods_diffed,  rolling, hour, weekday, month):
+                           num_periods_diffed,  rolling, hour, weekday, month, yesterday, lastweek):
     
     """ 
     Wrapper to go from the original series to X_train, y_train, X_last_period 
@@ -141,7 +147,7 @@ def prepare_for_prediction(series_, number_of_periods_ahead, num_periods_lagged,
                                                        #month=month,
                                                        #monthday=monthday,
                                                        rolling=rolling,
-                                                       hour=hour, weekday=weekday, month=month)
+                                                       hour=hour, weekday=weekday, month=month, yesterday=yesterday, lastweek=lastweek)
     # separate train and test data 
     last_period, training_data = separate_last_day(data_with_target_and_features)
 
@@ -156,7 +162,7 @@ def prepare_for_prediction(series_, number_of_periods_ahead, num_periods_lagged,
 
 
 def predict_period_n(series_, model, number_of_periods_ahead, num_periods_lagged, 
-                     num_periods_diffed, weekday, month, hour, rolling):
+                     num_periods_diffed, weekday, month, hour, rolling, yesterday, lastweek):
     
         X_train, y_train, X_last_period, data = prepare_for_prediction(series_, 
                                                              number_of_periods_ahead=number_of_periods_ahead, 
@@ -165,7 +171,7 @@ def predict_period_n(series_, model, number_of_periods_ahead, num_periods_lagged
                                                              #weekday=weekday,
                                                              #month=month,
                                                              #monthday=monthday,
-                                                             rolling=rolling, hour=hour, weekday=weekday,month=month)
+                                                             rolling=rolling, hour=hour, weekday=weekday,month=month, yesterday=yesterday, lastweek=lastweek)
         
         model.fit(X_train, y_train)
         return model.predict(X_last_period.values.reshape(1, -1)),data
@@ -173,7 +179,7 @@ def predict_period_n(series_, model, number_of_periods_ahead, num_periods_lagged
     
     
 def predict_n_periods(series_, n_periods, model, num_periods_lagged, num_periods_diffed=0, 
-                      weekday=False, month=False,rolling=[], hour=True):
+                      weekday=False, month=False,rolling=[], hour=True, yesterday=True, lastweek=True):
     predictions = []
 
     for period_ahead in range(1, n_periods+1):
@@ -185,7 +191,7 @@ def predict_n_periods(series_, n_periods, model, num_periods_lagged, num_periods
                                 weekday=weekday,
                                 month=month,
                                 hour=hour,
-                                rolling=rolling
+                                rolling=rolling, yesterday=yesterday, lastweek=lastweek
                                 )
         
         predictions.append(pred[0])
