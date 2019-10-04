@@ -60,7 +60,7 @@ def separate_last_day(df_):
 
     return last_period, training_data
 
-def build_some_features(df, num_periods_lagged=1, num_periods_diffed=0, rolling=[], hour=True, weekday=True, month=True, yesterday=True, lastweek=True):
+def build_some_features(df, num_periods_lagged=1, num_periods_diffed=0, rolling=[], hour=True, weekday=True, month=True, yesterday=True, lastweek=True, weekend=True):
     """
     Builds some features by calculating differences between periods  
     """
@@ -87,22 +87,26 @@ def build_some_features(df, num_periods_lagged=1, num_periods_diffed=0, rolling=
         df_['rolling_%s'%str(stat)] = df_['value'].rolling('1D').aggregate(stat)
 
     if weekday==True:
-        df_['day_of_week'] = df_.index.weekday
+        #df_['day_of_week'] = df_.index.weekday
         df_['sin_weekday'] = np.sin(2*np.pi*df_.index.weekday/7)
         df_['cos_weekday'] = np.sin(2*np.pi*df_.index.weekday/7)
-        df_ = df_.drop(columns=["day_of_week"])
+        #df_ = df_.drop(columns=["day_of_week"])
+
+    if weekend == True:
+        df_["weekend"] = df_.index.weekday//5
+
 
     if month==True:
-        df_['month'] = df_.index.month
+        #df_['month'] = df_.index.month
         df_['sin_month'] = np.sin(2*np.pi*df_.index.month/12)
         df_['cos_month'] = np.sin(2*np.pi*df_.index.month/12)
-        df_ = df_.drop(columns=["month"])
+        #df_ = df_.drop(columns=["month"])
 
     if hour==True:
-        df_['hour'] = df_.index.hour
+        #df_['hour'] = df_.index.hour
         df_['sin_hour'] = np.sin(2*np.pi*df_.index.hour/24)
         df_['cos_hour'] = np.sin(2*np.pi*df_.index.hour/24)
-        df_ = df_.drop(columns=["hour"])
+        #df_ = df_.drop(columns=["hour"])
 
     return df_
 
@@ -127,7 +131,7 @@ def separate_train_and_test_set(last_period_, training_data_, target='target'):
 
 
 def prepare_for_prediction(series_, number_of_periods_ahead, num_periods_lagged, 
-                           num_periods_diffed,  rolling, hour, weekday, month, yesterday, lastweek):
+                           num_periods_diffed,  rolling, hour, weekday, month, yesterday, lastweek,  weekend):
     
     """ 
     Wrapper to go from the original series to X_train, y_train, X_last_period 
@@ -147,7 +151,7 @@ def prepare_for_prediction(series_, number_of_periods_ahead, num_periods_lagged,
                                                        #month=month,
                                                        #monthday=monthday,
                                                        rolling=rolling,
-                                                       hour=hour, weekday=weekday, month=month, yesterday=yesterday, lastweek=lastweek)
+                                                       hour=hour, weekday=weekday, month=month, yesterday=yesterday, lastweek=lastweek,  weekend= weekend)
     # separate train and test data 
     last_period, training_data = separate_last_day(data_with_target_and_features)
 
@@ -162,7 +166,7 @@ def prepare_for_prediction(series_, number_of_periods_ahead, num_periods_lagged,
 
 
 def predict_period_n(series_, model, number_of_periods_ahead, num_periods_lagged, 
-                     num_periods_diffed, weekday, month, hour, rolling, yesterday, lastweek):
+                     num_periods_diffed, weekday, month, hour, rolling, yesterday, lastweek,  weekend):
     
         X_train, y_train, X_last_period, data = prepare_for_prediction(series_, 
                                                              number_of_periods_ahead=number_of_periods_ahead, 
@@ -171,7 +175,7 @@ def predict_period_n(series_, model, number_of_periods_ahead, num_periods_lagged
                                                              #weekday=weekday,
                                                              #month=month,
                                                              #monthday=monthday,
-                                                             rolling=rolling, hour=hour, weekday=weekday,month=month, yesterday=yesterday, lastweek=lastweek)
+                                                             rolling=rolling, hour=hour, weekday=weekday,month=month, yesterday=yesterday, lastweek=lastweek,  weekend=weekend)
         
         model.fit(X_train, y_train)
         return model.predict(X_last_period.values.reshape(1, -1)),data
@@ -179,7 +183,7 @@ def predict_period_n(series_, model, number_of_periods_ahead, num_periods_lagged
     
     
 def predict_n_periods(series_, n_periods, model, num_periods_lagged, num_periods_diffed=0, 
-                      weekday=False, month=False,rolling=[], hour=True, yesterday=True, lastweek=True):
+                      weekday=False, month=False,rolling=[], hour=True, yesterday=True, lastweek=True,  weekend=True):
     predictions = []
 
     for period_ahead in range(1, n_periods+1):
@@ -191,7 +195,7 @@ def predict_n_periods(series_, n_periods, model, num_periods_lagged, num_periods
                                 weekday=weekday,
                                 month=month,
                                 hour=hour,
-                                rolling=rolling, yesterday=yesterday, lastweek=lastweek
+                                rolling=rolling, yesterday=yesterday, lastweek=lastweek,  weekend= weekend
                                 )
         
         predictions.append(pred[0])
